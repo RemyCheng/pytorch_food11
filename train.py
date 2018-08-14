@@ -14,6 +14,7 @@ import copy
 import argparse
 import logging
 import random
+from tqdm import tqdm
 
 import utils
 import data_loader
@@ -51,37 +52,41 @@ def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=
         running_total = 0
             
         # Iterate over data.
-        for inputs, labels in dataloaders['train']:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+        # tqdm progress bar
+        with tqdm(total=len(dataloaders['train'])) as t:
+            for inputs, labels in dataloaders['train']:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+           
+                # zero the parameter gradients
+                optimizer.zero_grad()
 
-            # zero the parameter gradients
-            optimizer.zero_grad()
+                # forward
+                # track history if only in train
+                with torch.set_grad_enabled(True):
+                    outputs = model(inputs)
+                    _, preds = torch.max(outputs, 1)
+                    loss = criterion(outputs, labels)
+                    loss.backward()
+                    optimizer.step()
 
-            # forward
-            # track history if only in train
-            with torch.set_grad_enabled(True):
-                outputs = model(inputs)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
-
-                # statistics
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
-                running_total += inputs.size(0)
+                    # statistics
+                    running_loss += loss.item() * inputs.size(0)
+                    running_corrects += torch.sum(preds == labels.data)
+                    running_total += inputs.size(0)
+                t.update()
                 
-        epoch_loss = running_loss / running_total
-        epoch_acc = running_corrects.double() / running_total
+            epoch_loss = running_loss / running_total
+            epoch_acc = running_corrects.double() / running_total
 
-        logging.info('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
+            logging.info('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
 
         # validate
         val_acc = evaluate(dataloaders['validation'], model)
-        logging.info('Acc: {:.4f}'.format(val_acc))		
+        logging.info('Val Acc: {:.4f}'.format(val_acc))		
         # deep copy the model
         if val_acc > best_acc:
+            logging.info('Found new best accuracy')
             best_acc = val_acc
             best_model_wts = copy.deepcopy(model.state_dict())
 
@@ -126,14 +131,14 @@ if __name__ == "__main__":
     logging.info("Loading the datasets...")
 
     # fetch Food11 dataloaders {train, validation, evaluate}
-    dataloaders = data_loader.fetch_food11_dataloader(batch_size=params.batch_size, num_workers=0)
+    dataloaders = data_loader.fetch_food11_dataloader(batch_size=params.batch_size, num_workers=2)
     logging.info("- done.")
     
     '''
     Set Model and Optimization
     '''
     if params.model_version == "resnet18":
-        model = resnet.ResNet18().to(device)
+        model = resnet.resnet18(num_classes=11).to(device)
         optimizer = optim.SGD(model.parameters(), lr=params.learning_rate,
                               momentum=0.9, weight_decay=5e-4)
         # Set learning rate scheduler
