@@ -67,7 +67,7 @@ def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=
                 with torch.set_grad_enabled(True):
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
-                    if soft_targets != None:
+                    if soft_targets == None:
                         loss = criterion(outputs, labels)
                     else:
                         loss = criterion(outputs, labels, soft_targets[i])
@@ -142,6 +142,7 @@ if __name__ == "__main__":
     Set Model and Optimization
     '''
     model, scheduler, optimizer, criterion, require_teacher = train_handler.fetch_model_and_optimization(params)
+    model = model.to(device)
     if require_teacher:
         teacher_outputs = train_handler.fetch_teacher_outputs(dataloaders['train'], params.teacher, params.teacher_ckpt_path)
     else:
