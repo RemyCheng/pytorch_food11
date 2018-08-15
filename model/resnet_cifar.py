@@ -32,7 +32,7 @@ __all__ = ['ResNet', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110'
 
 def _weights_init(m):
     classname = m.__class__.__name__
-    print(classname)
+    # print(classname)
     if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
         init.kaiming_normal(m.weight)
 
@@ -109,15 +109,13 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
-def ResNet8():
-    return ResNet(BasicBlock, [1, 1, 1])
+def resnet8(num_classes=10):
+    return ResNet(BasicBlock, [1, 1, 1], num_classes=10)
 
-def ResNet14():
+def resnet14():
     return ResNet(BasicBlock, [2, 2, 2])
 def resnet20():
     return ResNet(BasicBlock, [3, 3, 3])
-def ResNet20():
-    return resnet20()
 
 def resnet32():
     return ResNet(BasicBlock, [5, 5, 5])

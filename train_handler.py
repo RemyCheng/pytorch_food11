@@ -19,7 +19,7 @@ def fetch_teacher_outputs(dataloader, teacher_model_version, ckpt_path):
     if teacher_model_version == 'resnet18':
         teacher_model = models.resnet18(num_classes=11)
     
-    utils.load_checkpoints(checkpoint=ckpt_pth, model=teacher_model)
+    utils.load_checkpoint(checkpoint=ckpt_path, model=teacher_model)
     
     teacher_model.to(device).eval()
     teacher_outputs = []	
@@ -28,6 +28,7 @@ def fetch_teacher_outputs(dataloader, teacher_model_version, ckpt_path):
         labels = labels.to(device)
         outputs = teacher_model(inputs).detach().to(torch.device('cpu')).numpy()
         teacher_outputs.append(outputs)
+        print(outputs.shape)
     return teacher_outputs
 def kdloss(outputs, labels, teacher_outputs, alpha=0.7, temperature=2):
     """
@@ -36,6 +37,7 @@ def kdloss(outputs, labels, teacher_outputs, alpha=0.7, temperature=2):
     NOTE: the KL Divergence for PyTorch comparing the softmaxs of teacher
     and student expects the input tensor to be log probabilities! See Issue #2
     """
+    T = temperature
     KD_loss = nn.KLDivLoss()(F.log_softmax(outputs/T, dim=1),
                              F.softmax(teacher_outputs/T, dim=1)) * (alpha * T * T) + \
               F.cross_entropy(outputs, labels) * (1. - alpha)
@@ -60,8 +62,9 @@ def fetch_model_and_optimization(params):
             model = models.resnet18(pretrained=True)
             num_filters = model.fc.in_features
             model.fc = nn.Linear(num_filters, 11)
+            update_params = model.parameters()
         elif params.pretrained != "none":
-            utils.load_checkpoints(params.pretrained, model)
+            utils.load_checkpoint(params.pretrained, model)
         # freeze convolution layers
         if params.freeze_conv == 'yes':
             model, update_params = freeze_resnet_conv(model)
@@ -78,7 +81,7 @@ def fetch_model_and_optimization(params):
         update_params = model.parameters()
         # pretrained
         if params.pretrained != "none":
-            utils.load_checkpoints(params.pretrained, model)
+            utils.load_checkpoint(params.pretrained, model)
         # freeze convolutional layers
         if params.freeze_conv == 'yes':
             model, update_params = freeze_resnet_conv(model)
@@ -89,7 +92,7 @@ def fetch_model_and_optimization(params):
         # Set loss function
         if params.teacher != "none":
             require_teacher = True
-            criterion = lambda outputs, labels, teacher_outputs: kdloss(outputs, labels, teacher_outputs, params.alpha, params.temparature)
+            criterion = lambda outputs, labels, teacher_outputs: kdloss(outputs, labels, teacher_outputs, params.alpha, params.temperature)
         else:
             criterion = nn.CrossEntropyLoss()
     return model, scheduler, optimizer, criterion, require_teacher

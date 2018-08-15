@@ -70,7 +70,8 @@ def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=
                     if soft_targets == None:
                         loss = criterion(outputs, labels)
                     else:
-                        loss = criterion(outputs, labels, soft_targets[i])
+                        soft_target = torch.from_numpy(soft_targets[i]).to(device)
+                        loss = criterion(outputs, labels, soft_target)
                     loss.backward()
                     optimizer.step()
 
