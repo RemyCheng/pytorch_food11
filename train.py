@@ -138,7 +138,19 @@ if __name__ == "__main__":
     Set Model and Optimization
     '''
     if params.model_version == "resnet18":
-        model = resnet.resnet18(num_classes=11).to(device)
+        if params.pretrained == 'yes':
+            model = models.resnet18(pretrained=True)
+            num_ftrs = model.fc.in_features
+            model.fc = nn.Linear(num_ftrs, 11)
+            if params.freeze_conv == 'yes':
+                for param in model.parameters():
+                    param.requires_grad = False
+                model.fc.weight.requires_grad = True
+                model.fc.bias.requires_grad = True
+            model = model.to(device)
+        else:
+            model = resnet.resnet18(num_classes=11).to(device)
+        
         optimizer = optim.SGD(model.parameters(), lr=params.learning_rate,
                               momentum=0.9, weight_decay=5e-4)
         # Set learning rate scheduler
@@ -179,3 +191,5 @@ if __name__ == "__main__":
                            'optim_dict' : optimizer.state_dict()},
                            is_best=best_acc,
                            checkpoint=args.model_dir)
+    test_acc = evaluate(dataloaders['evaluation'], model)
+    logging.info("Test Acc: {:.4f}".format(test_acc))
