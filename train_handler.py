@@ -28,7 +28,7 @@ def fetch_teacher_outputs(dataloader, teacher_model_version, ckpt_path):
         labels = labels.to(device)
         outputs = teacher_model(inputs).detach().to(torch.device('cpu')).numpy()
         teacher_outputs.append(outputs)
-        print(outputs.shape)
+        #print(outputs.shape)
     return teacher_outputs
 def kdloss(outputs, labels, teacher_outputs, alpha=0.7, temperature=2):
     """
