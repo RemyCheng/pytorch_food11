@@ -7,6 +7,8 @@ from torch.optim import lr_scheduler
 import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
+import torch.nn.functional as F
+
 import time
 import os
 import copy
@@ -17,10 +19,9 @@ import random
 from tqdm import tqdm
 
 import utils
-import data_loader
+import data_loader, train_handler
 import model.resnet as resnet
 import model.resnet_cifar as resnet_cifar
-import torch.nn.functional as F
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -32,7 +33,7 @@ parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir \
                     containing weights to reload before training")  # 'best' or 'train'
 
-def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=100):
+def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=100, soft_targets=None):
     since = time.time()
 
     best_model_wts = copy.deepcopy(model.state_dict())
@@ -54,7 +55,7 @@ def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=
         # Iterate over data.
         # tqdm progress bar
         with tqdm(total=len(dataloaders['train'])) as t:
-            for inputs, labels in dataloaders['train']:
+            for i, (inputs, labels) in enumerate(dataloaders['train']):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
            
@@ -66,7 +67,10 @@ def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=
                 with torch.set_grad_enabled(True):
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
-                    loss = criterion(outputs, labels)
+                    if soft_targets != None:
+                        loss = criterion(outputs, labels)
+                    else:
+                        loss = criterion(outputs, labels, soft_targets[i])
                     loss.backward()
                     optimizer.step()
 
@@ -137,6 +141,12 @@ if __name__ == "__main__":
     '''
     Set Model and Optimization
     '''
+    model, scheduler, optimizer, criterion, require_teacher = train_handler.fetch_model_and_optimization(params)
+    if require_teacher:
+        teacher_outputs = train_handler.fetch_teacher_outputs(dataloaders['train'], params.teacher, params.teacher_ckpt_path)
+    else:
+        teacher_outputs = None
+    '''
     if params.model_version == "resnet18":
         if params.pretrained == 'yes':
             model = models.resnet18(pretrained=True)
@@ -178,14 +188,15 @@ if __name__ == "__main__":
         scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
         # Set loss function
         criterion = nn.CrossEntropyLoss()
-        
+    '''  
 
     logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
     
    
     #train_and_evaluate(model, train_dl, dev_dl, scheduler, optimizer, loss_fn, metrics, params, args.model_dir, args.restore_file)
     #model, best_acc = train_model(datasets, model, criterion, optimizer, scheduler, num_epochs=params.num_epochs, teacher_outputs=teacher_outputs)
-    model, best_acc = train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=params.num_epochs)
+    model, best_acc = train_model(dataloaders, model, criterion, optimizer, scheduler,
+                                  num_epochs=params.num_epochs, soft_targets=teacher_outputs)
     utils.save_checkpoint({'epoch': params.num_epochs + 1,
                            'state_dict': model.state_dict(),
                            'optim_dict' : optimizer.state_dict()},
