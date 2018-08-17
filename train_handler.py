@@ -23,13 +23,18 @@ def fetch_teacher_outputs(dataloader, teacher_model_version, ckpt_path):
     
     teacher_model.to(device).eval()
     teacher_outputs = []	
-    for inputs, labels in dataloader:
+    for i, (inputs, labels) in enumerate(dataloader):
         inputs = inputs.to(device)
         labels = labels.to(device)
         outputs = teacher_model(inputs).detach().to(torch.device('cpu')).numpy()
         teacher_outputs.append(outputs)
         #print(outputs.shape)
     return teacher_outputs
+def fetch_teacher_model(teacher_model_version, ckpt_path):
+    if teacher_model_version == 'resnet18':
+        teacher_model = models.resnet18(num_classes=11)
+    utils.load_checkpoint(ckpt_path, teacher_model)
+    return teacher_model
 def kdloss(outputs, labels, teacher_outputs, alpha=0.7, temperature=2):
     """
     Compute the knowledge-distillation (KD) loss given outputs, labels.

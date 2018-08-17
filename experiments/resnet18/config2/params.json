@@ -1,0 +1,13 @@
+{
+    "model_version": "resnet18",
+    "batch_size": 256,
+    "num_epochs": 30,
+    "learning_rate": 1e-3,
+    "weight_decay": 5e-4,
+    "pretrained": "ImageNet",
+    "freeze_conv": "no",
+    "teacher": "none",
+    "teacher_ckpt_path": "none",
+    "alpha": 0.0,
+    "temperature": 1
+}

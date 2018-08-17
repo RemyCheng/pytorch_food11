@@ -33,7 +33,7 @@ parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir \
                     containing weights to reload before training")  # 'best' or 'train'
 
-def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=100, soft_targets=None):
+def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=100, teacher_model=None):
     since = time.time()
 
     best_model_wts = copy.deepcopy(model.state_dict())
@@ -55,10 +55,9 @@ def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=
         # Iterate over data.
         # tqdm progress bar
         with tqdm(total=len(dataloaders['train'])) as t:
-            for i, (inputs, labels) in enumerate(dataloaders['train']):
+            for inputs, labels in dataloaders['train']:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
-           
                 # zero the parameter gradients
                 optimizer.zero_grad()
 
@@ -67,11 +66,15 @@ def train_model(dataloaders, model, criterion, optimizer, scheduler, num_epochs=
                 with torch.set_grad_enabled(True):
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
-                    if soft_targets == None:
+                    if teacher_model == None:
                         loss = criterion(outputs, labels)
                     else:
-                        soft_target = torch.from_numpy(soft_targets[i]).to(device)
-                        loss = criterion(outputs, labels, soft_target)
+                        teacher_model.eval()
+                        teacher_model = teacher_model.to(device)
+                        soft_targets = teacher_model(inputs)
+                        #print(soft_targets[0])
+                        #print(labels[0])
+                        loss = criterion(outputs, labels, soft_targets)
                     loss.backward()
                     optimizer.step()
 
@@ -136,7 +139,7 @@ if __name__ == "__main__":
     logging.info("Loading the datasets...")
 
     # fetch Food11 dataloaders {train, validation, evaluate}
-    dataloaders = data_loader.fetch_food11_dataloader(batch_size=params.batch_size, num_workers=2)
+    dataloaders = data_loader.fetch_food11_dataloader(batch_size=params.batch_size, num_workers=4)
     logging.info("- done.")
     
     '''
@@ -145,60 +148,16 @@ if __name__ == "__main__":
     model, scheduler, optimizer, criterion, require_teacher = train_handler.fetch_model_and_optimization(params)
     model = model.to(device)
     if require_teacher:
-        teacher_outputs = train_handler.fetch_teacher_outputs(dataloaders['train'], params.teacher, params.teacher_ckpt_path)
+        #teacher_outputs = train_handler.fetch_teacher_outputs(dataloaders['train'], params.teacher, params.teacher_ckpt_path)
+        teacher_model = train_handler.fetch_teacher_model(params.teacher, params.teacher_ckpt_path)
     else:
-        teacher_outputs = None
-    '''
-    if params.model_version == "resnet18":
-        if params.pretrained == 'yes':
-            model = models.resnet18(pretrained=True)
-            num_ftrs = model.fc.in_features
-            model.fc = nn.Linear(num_ftrs, 11)
-            if params.freeze_conv == 'yes':
-                for param in model.parameters():
-                    param.requires_grad = False
-                model.fc.weight.requires_grad = True
-                model.fc.bias.requires_grad = True
-            model = model.to(device)
-        else:
-            model = resnet.resnet18(num_classes=11).to(device)
-        
-        optimizer = optim.SGD(model.parameters(), lr=params.learning_rate,
-                              momentum=0.9, weight_decay=5e-4)
-        # Set learning rate scheduler
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
-        
-        # Set loss function
-        criterion = nn.CrossEntropyLoss()
-    elif params.model_version == "resnet8":
-        model = resnet_cifar.ResNet8().to(device)
-        if args.restore_file is not None:
-	        restore_path = os.path.join(args.model_dir, args.restore_file + '.pth.tar')
-	        logging.info("Restoring parameters from {}".format(restore_path))
-	        ck = utils.load_checkpoint(restore_path, model, None)
-        if params.freeze_conv == 1:
-            for param in model.parameters():
-                param.requires_grad = False
-            model.linear.weight.requires_grad = True
-            model.linear.bias.requires_grad = True
-            optimizer = optim.SGD(model.linear.parameters(), lr=params.learning_rate,
-                              momentum=0.9, weight_decay=5e-4)
-        else:
-            optimizer = optim.SGD(model.parameters(), lr=params.learning_rate,
-                              momentum=0.9, weight_decay=5e-4)
-        # Set learning rate scheduler
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
-        # Set loss function
-        criterion = nn.CrossEntropyLoss()
-    '''  
-
+        #teacher_outputs = None
+        teacher_model = None
+    
     logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
     
-   
-    #train_and_evaluate(model, train_dl, dev_dl, scheduler, optimizer, loss_fn, metrics, params, args.model_dir, args.restore_file)
-    #model, best_acc = train_model(datasets, model, criterion, optimizer, scheduler, num_epochs=params.num_epochs, teacher_outputs=teacher_outputs)
     model, best_acc = train_model(dataloaders, model, criterion, optimizer, scheduler,
-                                  num_epochs=params.num_epochs, soft_targets=teacher_outputs)
+                                  num_epochs=params.num_epochs, teacher_model=teacher_model)
     utils.save_checkpoint({'epoch': params.num_epochs + 1,
                            'state_dict': model.state_dict(),
                            'optim_dict' : optimizer.state_dict()},
