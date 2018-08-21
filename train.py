@@ -19,7 +19,7 @@ import random
 from tqdm import tqdm
 
 import utils
-import data_loader, train_handler
+import data_loader, model_handler
 import model.resnet as resnet
 import model.resnet_cifar as resnet_cifar
 
@@ -27,7 +27,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
 # parser.add_argument('--data_dir', default='data/64x64_SIGNS', help="Directory for the dataset")
-parser.add_argument('--model_dir', default='experiments/resnet18/config1',
+parser.add_argument('--model_dir', default='experiments/resnet18/test',
                     help="Directory containing params.json")
 parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir \
@@ -145,13 +145,11 @@ if __name__ == "__main__":
     '''
     Set Model and Optimization
     '''
-    model, scheduler, optimizer, criterion, require_teacher = train_handler.fetch_model_and_optimization(params)
+    model, scheduler, optimizer, criterion, require_teacher = model_handler.fetch_model_and_optimization(params)
     model = model.to(device)
     if require_teacher:
-        #teacher_outputs = train_handler.fetch_teacher_outputs(dataloaders['train'], params.teacher, params.teacher_ckpt_path)
-        teacher_model = train_handler.fetch_teacher_model(params.teacher, params.teacher_ckpt_path)
+        teacher_model = model_handler.fetch_teacher_model(params.teacher, params.teacher_ckpt_path)
     else:
-        #teacher_outputs = None
         teacher_model = None
     
     logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
