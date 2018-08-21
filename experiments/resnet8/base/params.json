@@ -1,0 +1,13 @@
+{
+    "model_version": "resnet8",
+    "batch_size": 128,
+    "num_epochs": 100,
+    "learning_rate": 1e-1,
+    "weight_decay": 5e-4,
+    "pretrained": "none",
+    "freeze_conv": "no",
+    "teacher": "none",
+    "teacher_ckpt_path": "none",
+    "alpha": 0,
+    "temperature": 1
+}

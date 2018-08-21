@@ -1,0 +1,11 @@
+2018-08-19 09:40:33,653:INFO: Loading the datasets...
+2018-08-19 09:40:33,794:INFO: - done.
+2018-08-19 09:40:50,816:INFO: Starting training for 1 epoch(s)
+2018-08-19 09:40:50,827:INFO: Epoch 0/0
+2018-08-19 09:40:50,827:INFO: ----------
+2018-08-19 09:41:32,968:INFO: Train Loss: 2.0724 Acc: 0.2608
+2018-08-19 09:41:52,398:INFO: Val Acc: 0.2910
+2018-08-19 09:41:52,399:INFO: Found new best accuracy
+2018-08-19 09:41:52,413:INFO: Training complete in 1m 2s
+2018-08-19 09:41:52,414:INFO: Best val Acc: 0.290962
+2018-08-19 09:42:11,653:INFO: Test Acc: 0.3098
