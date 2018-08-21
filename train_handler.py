@@ -34,6 +34,8 @@ def fetch_teacher_model(teacher_model_version, ckpt_path):
     if teacher_model_version == 'resnet18':
         teacher_model = models.resnet18(num_classes=11)
     utils.load_checkpoint(ckpt_path, teacher_model)
+    for param in teacher_model.parameters():
+        param.requires_grad = False
     return teacher_model
 def kdloss(outputs, labels, teacher_outputs, alpha=0.7, temperature=2):
     """
@@ -100,4 +102,45 @@ def fetch_model_and_optimization(params):
             criterion = lambda outputs, labels, teacher_outputs: kdloss(outputs, labels, teacher_outputs, params.alpha, params.temperature)
         else:
             criterion = nn.CrossEntropyLoss()
+    # resnet14
+    elif params.model_version == 'resnet14':
+        model = resnet_cifar.resnet14(num_classes=11)
+        update_params = model.parameters()
+        # pretrained
+        if params.pretrained != 'none':
+            utils.load_checkpoint(params.pretrained, model)
+        # freeze convolutional layers
+        if params.freeze_conv == 'yes':
+            model, update_params = freeze_resnet_conv(model)
+        # oiptimizer
+        optimizer = optim.SGD(update_params, lr=params.learning_rate, momentum=0.9, weight_decay=params.weight_decay)
+        # Set learning rate scheduler
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+        # Set loss function
+        if params.teacher != 'none':
+            require_teacher = True
+            criterion = lambda outputs, labels, teacher_outputs: kdloss(outputs, labels, teacher_outputs, params.alpha, params.temperature)
+        else:
+            criterion = nn.CrossEntropyLoss()
+    # resnet20
+    elif params.model_version == 'resnet20':
+        model = resnet_cifar.resnet20(num_classes=11)
+        update_params = model.parameters()
+        # pretrained
+        if params.pretrained != "none":
+            utils.load_checkpoint(params.pretrained, model)
+        # freeze convolutional layers
+        if params.freeze_conv == 'yes':
+            model, update_params = freeze_resnet_conv(model)
+        # optimizer
+        optimizer = optim.SGD(update_params, lr=params.learning_rate, momentum=0.9, weight_decay=params.weight_decay)
+        # Set learning rate scheduler
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+        # Set loss function
+        if params.teacher != "none":
+            require_teacher = True
+            criterion = lambda outputs, labels, teacher_outputs: kdloss(outputs, labels, teacher_outputs, params.alpha, params.temperature)
+        else:
+            criterion = nn.CrossEntropyLoss()
+    
     return model, scheduler, optimizer, criterion, require_teacher

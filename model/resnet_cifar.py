@@ -112,10 +112,10 @@ class ResNet(nn.Module):
 def resnet8(num_classes=10):
     return ResNet(BasicBlock, [1, 1, 1], num_classes)
 
-def resnet14():
-    return ResNet(BasicBlock, [2, 2, 2])
-def resnet20():
-    return ResNet(BasicBlock, [3, 3, 3])
+def resnet14(num_classes=10):
+    return ResNet(BasicBlock, [2, 2, 2], num_classes)
+def resnet20(num_classes=10):
+    return ResNet(BasicBlock, [3, 3, 3], num_classes)
 
 def resnet32():
     return ResNet(BasicBlock, [5, 5, 5])

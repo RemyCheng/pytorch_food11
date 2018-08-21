@@ -159,9 +159,9 @@ if __name__ == "__main__":
     model, best_acc = train_model(dataloaders, model, criterion, optimizer, scheduler,
                                   num_epochs=params.num_epochs, teacher_model=teacher_model)
     utils.save_checkpoint({'epoch': params.num_epochs + 1,
-                           'state_dict': model.state_dict(),
-                           'optim_dict' : optimizer.state_dict()},
-                           is_best=best_acc,
-                           checkpoint=args.model_dir)
+                          'state_dict': model.state_dict()},
+                          #'optim_dict' : optimizer.state_dict()},
+                          is_best=best_acc,
+                          checkpoint=args.model_dir)
     test_acc = evaluate(dataloaders['evaluation'], model)
     logging.info("Test Acc: {:.4f}".format(test_acc))
