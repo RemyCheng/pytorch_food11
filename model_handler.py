@@ -33,6 +33,12 @@ def fetch_teacher_outputs(dataloader, teacher_model_version, ckpt_path):
 def fetch_teacher_model(teacher_model_version, ckpt_path):
     if teacher_model_version == 'resnet18':
         teacher_model = models.resnet18(num_classes=11)
+    elif teacher_model_version == 'resnet34':
+        teacher_model = models.resnet34(num_classes=11)
+    elif teacher_model_version == 'resnet50':
+        teacher_model = models.resnet50(num_classes=11)
+    elif teacher_model_version == 'resnet152':
+        teacher_model = models.resnet152(num_classes=11)
     utils.load_checkpoint(ckpt_path, teacher_model)
     for param in teacher_model.parameters():
         param.requires_grad = False
@@ -81,7 +87,75 @@ def fetch_model_and_optimization(params):
         scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
         # Set loss function
         criterion = nn.CrossEntropyLoss()
-    
+    # resnet34
+    elif params.model_version == 'resnet34':
+        # pretrained from imagenet
+        if params.pretrained == 'ImageNet':
+            model = models.resnet34(pretrained=True)
+            num_filters = model.fc.in_features
+            model.fc = nn.Linear(num_filters, 11)
+        # pretrained from local directory or no pretrained file
+        else:
+            model = models.resnet34(num_classes=11)
+            if params.pretrained != 'none':
+               utils.load_checkpoint(params.pretrained, model)
+        # freeze conv layers
+        if params.freeze_conv == 'yes':
+            model, update_params = freeze_resnet_conv(model)
+        else:
+            update_params = model.parameters()
+        # optimizer
+        optimizer = optim.SGD(update_params, lr=params.learning_rate, momentum=0.9, weight_decay=params.weight_decay)
+        # set learning rate scheduler
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+        # set loss function
+        criterion = nn.CrossEntropyLoss()
+    # resnet50
+    elif params.model_version == 'resnet50':
+        # pretrained from ImageNet
+        if params.pretrained == 'ImageNet':
+            model = models.resnet50(pretrained=True)
+            num_filters = model.fc.in_features
+            model.fc = nn.Linear(num_filters, 11)
+        # pretrained file from local directory or no pretrained file
+        else:
+            model = models.resnet50(num_classes=11)
+            if params.pretrained != 'none':
+                utils.load_checkpoint(params.pretrained, model)
+        # freeze conv layers
+        if params.freeze_conv == 'yes':
+            model, update_params = freeze_resnet_conv(model)
+        else:
+            update_params = model.parameters()
+        # optimizer
+        optimizer = optim.SGD(update_params, lr=params.learning_rate, momentum=0.9, weight_decay=params.weight_decay)
+        # set learning rate scheduler
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=params.step_lr, gamma=0.1)
+        # set loss function
+        criterion = nn.CrossEntropyLoss()
+    # resnet152
+    elif params.model_version == 'resnet152':
+        # pretrained from ImageNet
+        if params.pretrained == 'ImageNet':
+            model = models.resnet152(pretrained=True)
+            num_filters = model.fc.in_features
+            model.fc = nn.Linear(num_filters, 11)
+        # pretrained file from local directory or no pretrained file
+        else:
+            model = models.resnet152(num_classes=11)
+            if params.pretrained != 'none':
+                utils.load_checkpoint(params.pretrained, model)
+        # freeze conv layers
+        if params.freeze_conv == 'yes':
+            model, update_params = freeze_resnet_conv(model)
+        else:
+            update_params = model.parameters()
+        # optimizer
+        optimizer = optim.SGD(update_params, lr=params.learning_rate, momentum=0.9, weight_decay=params.weight_decay)
+        # set learning rate scheduler
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=params.step_lr, gamma=0.1)
+        # set loss function
+        criterion = nn.CrossEntropyLoss()
     # resnet8
     elif params.model_version == 'resnet8':
         model = resnet_cifar.resnet8(num_classes=11)
