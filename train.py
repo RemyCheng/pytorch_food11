@@ -148,6 +148,9 @@ if __name__ == "__main__":
     model, scheduler, optimizer, criterion, require_teacher = model_handler.fetch_model_and_optimization(params)
     model = model.to(device)
     if require_teacher:
+        logging.info("Fetch teacher model: {}".format(params.teacher))
+        logging.info("Teacher check point path: {}".format(params.teacher_ckpt_path))
+        logging.info("aplha: {}, temperature: {}".format(params.alpha, params.temperature))
         teacher_model = model_handler.fetch_teacher_model(params.teacher, params.teacher_ckpt_path)
     else:
         teacher_model = None
